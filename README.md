@@ -2,10 +2,6 @@
 
 این پروژه یک پنل وب مستقل و پیشرفته است که قابلیت‌های مدیریتی قدرتمندی را به پنل 3x-ui اضافه می‌کند. این ابزار به مدیران سرور اجازه می‌دهد تا به صورت متمرکز و از طریق یک رابط کاربری گرافیکی، کاربران و گروه‌های کاربری را مدیریت کرده، ترافیک آن‌ها را همگام‌سازی کنند و کاربران جدیدی را به سادگی به چندین اینباند به صورت همزمان اضافه نمایند.
 
-![نمایی از پنل](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO_NAME/main/screenshot.png)
-*(نکته: برای نمایش تصویر، ابتدا یک اسکرین‌شات از پنل خود گرفته، آن را با نام `screenshot.png` در این پوشه قرار دهید و به گیت‌هاب پوش کنید. سپس آدرس بالا را با آدرس صحیح تصویر در ریپازیتوری خودتان جایگزین کنید.)*
-
----
 
 ## قابلیت‌های کلیدی
 
@@ -40,7 +36,7 @@
 برای نصب کامل این پنل مدیریتی روی یک سرور جدید، کافیست دستور زیر را اجرا کنید. اسکریپت به صورت هوشمند شماره پورت مورد نظر شما را پرسیده و تمام مراحل را به صورت خودکار انجام می‌دهد.
 
 ```bash
-wget -O install.sh [https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO_NAME/main/install.sh](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO_NAME/main/install.sh) && chmod +x install.sh && ./install.sh
+wget -O install.sh [https://raw.githubusercontent.com/smblue07/my-sync-panel/main/install.sh](https://raw.githubusercontent.com/smblue07/my-sync-panel/main/install.sh) && chmod +x install.sh && ./install.sh
 ```
 **توجه:** آدرس بالا را با آدرس `install.sh` در ریپازیتوری گیت‌هاب خودتان جایگزین کنید.
 
