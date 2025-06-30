@@ -283,3 +283,110 @@ def sync_now():
 if __name__ == '__main__':
     port = int(os.environ.get('SYNC_MANAGER_PORT', 5001))
     app.run(host='0.0.0.0', port=port)
+
+
+# --- کتابخانه های جدید را در بالای فایل app.py اضافه کنید ---
+# import qrcode 
+# import base64 
+# from io import BytesIO
+
+# ... (تمام کدهای قبلی شما در اینجا قرار دارند) ...
+
+
+# --- بخش جدید: روت عمومی برای نمایش صفحه سابسکریپشن سفارشی ---
+
+# این یک تابع کمکی برای ساخت لینک کانفیگ است. این نمونه برای VLESS+WS+TLS است.
+def generate_config_link(client_uuid, client_email, inbound_details, stream_settings, panel_settings):
+    # این تابع را می توان برای پروتکل های دیگر نیز گسترش داد
+    if inbound_details['protocol'] != 'vless':
+        return "# Protocol not supported by this generator"
+
+    address = panel_settings.get('subDomain', 'your.domain.com')
+    port = inbound_details['port']
+
+    # پارامترهای مخصوص stream
+    network = stream_settings.get('network', 'ws')
+    security = stream_settings.get('security', 'tls')
+
+    ws_settings = stream_settings.get('wsSettings', {})
+    path = ws_settings.get('path', '/')
+    host = ws_settings.get('headers', {}).get('Host', address)
+
+    tls_settings = stream_settings.get('tlsSettings', {})
+    sni = tls_settings.get('serverName', address)
+    fp = tls_settings.get('fingerprint', 'chrome')
+
+    # ساخت لینک نهایی
+    # توجه: برای جلوگیری از مشکلات در کلاینت ها، نام کاربری را URL-encode می کنیم
+    import urllib.parse
+    encoded_remark = urllib.parse.quote(client_email)
+
+    link = f"vless://{client_uuid}@{address}:{port}?type={network}&security={security}&path={urllib.parse.quote(path)}&host={host}&sni={sni}&fp={fp}#{encoded_remark}"
+    return link
+
+@app.route('/display')
+# این روت عمومی است و @login_required ندارد
+def display_configs():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+
+        panel_settings = {row['key']: row['value'] for row in conn.execute("SELECT key, value FROM settings WHERE key LIKE 'sub%'").fetchall()}
+        all_inbounds = conn.execute("SELECT id, remark, port, protocol, settings, stream_settings FROM inbounds WHERE enable = 1").fetchall()
+        traffic_map = {row['email']: dict(row) for row in conn.execute("SELECT email, up, down, total, expiry_time FROM client_traffics").fetchall()}
+        conn.close()
+
+        # دسته بندی کانفیگ ها بر اساس اینباند
+        inbounds_data = defaultdict(list)
+
+        for inbound in all_inbounds:
+            inbound_remark = inbound['remark'] or f"Inbound on port {inbound['port']}"
+            if not inbound['settings'] or not inbound['stream_settings']: continue
+
+            try:
+                inbound_stream_settings = json.loads(inbound['stream_settings'])
+                clients = json.loads(inbound['settings']).get('clients', [])
+
+                for client in clients:
+                    email = client.get('email')
+                    if not email: continue
+
+                    client_traffic = traffic_map.get(email, {})
+                    usage_bytes = client_traffic.get('up', 0) + client_traffic.get('down', 0)
+                    total_bytes = client_traffic.get('total', 0)
+                    expiry_time = client_traffic.get('expiry_time', 0)
+
+                    expiry_date_str = 'Never'
+                    if expiry_time > 0:
+                        try:
+                            expiry_date_str = datetime.fromtimestamp(expiry_time / 1000).strftime('%Y-%m-%d')
+                        except (ValueError, OSError): expiry_date_str = 'Invalid Date'
+
+                    link = generate_config_link(client['id'], email, inbound, inbound_stream_settings, panel_settings)
+
+                    qr_img = qrcode.make(link)
+                    buffered = BytesIO()
+                    qr_img.save(buffered, format="PNG")
+                    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                    qr_data_uri = f"data:image/png;base64,{img_str}"
+
+                    inbounds_data[inbound_remark].append({
+                        'email': email,
+                        'link': link,
+                        'qr_code': qr_data_uri,
+                        'usage_gb': usage_bytes / (1024**3),
+                        'total_gb': total_bytes / (1024**3),
+                        'expiry_date': expiry_date_str
+                    })
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+        return render_template('display_page.html', inbounds_data=dict(inbounds_data))
+
+    except Exception as e:
+        return f"An error occurred: {e}"
+
+# --- اجرای برنامه (این خط باید در انتهای فایل شما باشد) ---
+if __name__ == '__main__':
+    port = int(os.environ.get('SYNC_MANAGER_PORT', 5001))
+    app.run(host='0.0.0.0', port=port)
