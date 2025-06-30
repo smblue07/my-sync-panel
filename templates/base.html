@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Sync Manager{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 20px auto; padding: 10px 20px; background-color: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .top-bar .logo { font-size: 24px; color: #2c3e50; font-weight: 600; }
+        .top-bar .nav { display: flex; gap: 15px; }
+        .top-bar .nav a { text-decoration: none; padding: 8px 15px; border-radius: 8px; font-weight: 500; transition: background-color 0.2s, color 0.2s; }
+        .top-bar .nav a.active { background-color: #3498db; color: white; }
+        .top-bar .nav a:not(.active) { color: #34495e; background-color: #ecf0f1; }
+        .top-bar .user-info a { text-decoration: none; background: #e74c3c; color: white; padding: 8px 15px; border-radius: 8px; font-weight: 500; }
+        .flash-messages { list-style: none; padding: 0; max-width: 1400px; margin: 0 auto 20px auto; }
+        .flash-messages li { padding: 15px; border-radius: 8px; color: white; margin-bottom: 10px; }
+        .flash-success { background-color: #2ecc71; } .flash-danger { background-color: #e74c3c; } .flash-info { background-color: #3498db; }
+    </style>
+</head>
+<body>
+    <header class="top-bar">
+        <div class="logo">Ultimate Manager</div>
+        <nav class="nav">
+            <a href="{{ url_for('sync_management') }}" class="{{ 'active' if request.endpoint == 'sync_management' else '' }}">Sync Management</a>
+            <a href="{{ url_for('add_client_page') }}" class="{{ 'active' if request.endpoint == 'add_client_page' else '' }}">Add Client</a>
+        </nav>
+        <div class="user-info">
+            {% if session.logged_in %}
+            <span>Welcome, {{ session.username }}! <a href="{{ url_for('logout') }}">Logout</a></span>
+            {% endif %}
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class=flash-messages>
+        {% for category, message in messages %}
+          <li class="flash-{{ category }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

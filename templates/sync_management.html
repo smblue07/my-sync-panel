@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Sync Management{% endblock %}
+{% block content %}
+<style>
+    .info { text-align: center; color: #7f8c8d; margin-bottom: 20px; }
+    .main-container { display: grid; grid-template-columns: 7fr 5fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
+    .panel { background: #fff; padding: 25px 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; }
+    pre { background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 8px; white-space: pre-wrap; font-size: 13px; max-height: 80vh; overflow-y: auto; }
+    .group-list { list-style: none; padding: 0; max-height: 70vh; overflow-y: auto; }
+    .group-card { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+    .group-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .group-title { display: flex; align-items: center; }
+    .group-title input[type="checkbox"] { width: 18px; height: 18px; margin-right: 15px; }
+    .group-title label { font-size: 20px; font-weight: 600; }
+    .group-info { font-size: 13px; color: #6c757d; }
+    .group-info span { margin-left: 15px; }
+    .client-list { list-style: none; padding-left: 40px; }
+    .client-list li { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
+    .client-usage { font-weight: 600; color: #2980b9; }
+    .edit-form { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ced4da; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+    .form-group { display: flex; flex-direction: column; flex: 1; min-width: 120px; }
+    .form-group.action-button { flex-grow: 0; }
+    .form-group label { font-size: 12px; margin-bottom: 4px; color: #495057; }
+    .form-group input { padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
+    .btn { border: none; padding: 10px 15px; font-size: 14px; border-radius: 8px; cursor: pointer; color: white; width: 100%; box-sizing: border-box; }
+    .btn-set { background-color: #17a2b8; }
+    .main-actions { display: flex; gap: 10px; margin-top: 25px; }
+    .btn-save-whitelist { background-color: #8e44ad; flex-grow: 1; }
+    .btn-sync { background-color: #27ae60; flex-grow: 1; }
+</style>
+<div class="main-container">
+    <div class="control-panel panel">
+        <h2>Group Sync Management</h2>
+        <p class="info">Select groups to <strong>include</strong> in automatic syncing (Whitelist). Then click "Save Whitelist".</p>
+
+        <ul class="group-list">
+            {% for group_name, group_data in all_groups_data.items() %}
+            <li class="group-card">
+                <div class="group-header">
+                    <div class="group-title">
+                        <input type="checkbox" name="groups_to_sync" value="{{ group_name }}" id="group-{{ loop.index }}" form="whitelist-form" {% if group_name in whitelisted_groups %}checked{% endif %}>
+                        <label for="group-{{ loop.index }}">{{ group_name }}</label>
+                    </div>
+                    <div class="group-info">
+                        <span>Total: <strong>{{ "%.2f"|format(group_data.total_gb_group) }} GB</strong></span>
+                        <span>Expiry: <strong>{{ group_data.expiry_date_group }}</strong></span>
+                    </div>
+                </div>
+                <ul class="client-list">
+                    {% for client in group_data.clients %}
+                    <li>
+                        <span>{{ client.email }}</span>
+                        <span class="client-usage">{{ "%.2f"|format(client.usage_gb) }} / {{ "%.2f"|format(client.total_gb) }} GB</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <form action="{{ url_for('edit_group') }}" method="post" class="edit-form">
+                    <input type="hidden" name="sub_id" value="{{ group_name }}">
+                    <div class="form-group">
+                        <label>Set Used (GB)</label>
+                        <input type="number" name="new_usage_gb" step="0.1" placeholder="e.g. 5.5">
+                    </div>
+                    <div class="form-group">
+                        <label>Set Total (GB)</label>
+                        <input type="number" name="new_total_gb" step="1" placeholder="e.g. 100">
+                    </div>
+                    <div class="form-group">
+                        <label>Set Expiry (Days)</label>
+                        <input type="number" name="new_expiry_days" step="1" placeholder="e.g. 30">
+                    </div>
+                    <div class="form-group action-button">
+                        <button type="submit" class="btn btn-set">Apply Changes</button>
+                    </div>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <div class="main-actions">
+            <form action="{{ url_for('save_whitelist') }}" method="post" id="whitelist-form" style="flex-grow: 1; margin:0;">
+                <button type="submit" class="btn btn-save-whitelist">Save Whitelist</button>
+            </form>
+            <form action="{{ url_for('sync_now') }}" method="post" style="flex-grow: 1; margin:0;">
+                <button type="submit" class="btn btn-sync">Sync Now Manually</button>
+            </form>
+        </div>
+    </div>
+    <div class="output-panel panel">
+        <h2>Sync Log</h2>
+        <pre>{% if sync_output %}{{ sync_output }}{% else %}Click "Sync Now" to see the output of the sync script here.{% endif %}</pre>
+    </div>
+</div>
+{% endblock %}
