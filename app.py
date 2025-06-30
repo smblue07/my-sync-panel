@@ -14,9 +14,10 @@ SYNC_SCRIPT_PATH = '/root/the_final_sync.py'
 STATE_FILE = '/root/sync_state.json'
 
 app = Flask(__name__)
-app.secret_key = 'a-final-super-strong-and-unguessable-secret-key-reborn-v3'
+app.secret_key = 'a-final-super-strong-and-unguessable-secret-key-reborn-v4'
 
-# --- توابع کمکی ---
+# --- توابع کمکی و روت های ادمین (بدون تغییر) ---
+# ... (تمام کدهای قبلی از پاسخ های قبل باید اینجا باشند)
 def load_state():
     if not os.path.exists(STATE_FILE): return {}
     try:
@@ -76,8 +77,6 @@ def get_all_groups_with_full_details():
     except Exception as e:
         print(f"Error getting group full details: {e}")
         return {}
-
-# --- سیستم لاگین ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -102,7 +101,6 @@ def login():
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
 
-# --- مسیرهای اصلی برنامه ---
 @app.route('/')
 @login_required
 def index(): return redirect(url_for('sync_management'))
@@ -118,12 +116,12 @@ def sync_management():
 def add_client_page():
     all_inbounds = get_all_inbounds_info()
     return render_template('add_client.html', all_inbounds=all_inbounds)
-
-# --- روت های عملیات ---
+def get_clients_for_subid(sub_id):
+    all_groups = get_all_groups_with_full_details()
+    return [client['email'] for client in all_groups.get(sub_id, {}).get('clients', [])]
 @app.route('/add_client', methods=['POST'])
 @login_required
 def add_client():
-    # این تابع بدون تغییر است
     try:
         base_email = request.form['email']
         sub_id = request.form['sub_id']
@@ -150,8 +148,6 @@ def add_client():
         flash(f'User creation process completed for base email "{base_email}"!', 'success')
     except Exception as e: flash(f'An error occurred while adding user: {e}', 'danger')
     return redirect(url_for('add_client_page'))
-
-# ... (سایر روت های ادمین مانند set_limits, sync_sum, sync_max و... بدون تغییر هستند)
 @app.route('/save_whitelist', methods=['POST'])
 @login_required
 def save_whitelist():
@@ -169,9 +165,6 @@ def sync_now():
         session['sync_output'] = f"Failed to run sync script: {e}"
         flash('Error executing sync script.', 'danger')
     return redirect(url_for('sync_management'))
-def get_clients_for_subid(sub_id):
-    all_groups = get_all_groups_with_full_details()
-    return [client['email'] for client in all_groups.get(sub_id, {}).get('clients', [])]
 @app.route('/sync_sum', methods=['POST'])
 @login_required
 def sync_sum():
@@ -229,8 +222,7 @@ def set_limits():
 
 # --- بخش جدید: روت عمومی برای نمایش صفحه سابسکریپشن ---
 def generate_single_config_link(client_uuid, client_email, inbound_details, stream_settings, panel_settings):
-    if inbound_details['protocol'] != 'vless':
-        return "# Protocol not supported by this generator"
+    if inbound_details['protocol'] != 'vless': return "# Protocol not supported by this generator"
     remark = client_email
     address = panel_settings.get('subDomain', 'your.domain.com')
     port = inbound_details['port']
@@ -246,14 +238,15 @@ def generate_single_config_link(client_uuid, client_email, inbound_details, stre
     link = f"vless://{client_uuid}@{address}:{port}?type={network}&security={security}&path={urllib.parse.quote(path)}&host={host}&sni={sni}&fp={fp}#{encoded_remark}"
     return link
 
-@app.route('/display') # نام تابع را برای هماهنگی با url_for تغییر می دهیم
-@login_required # برای امنیت، این صفحه را هم پشت لاگین قرار می دهیم
+@app.route('/display')
+@login_required 
 def display_page():
     try:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         panel_settings = {row['key']: row['value'] for row in conn.execute("SELECT key, value FROM settings WHERE key LIKE 'sub%'").fetchall()}
         all_inbounds = conn.execute("SELECT id, remark, port, protocol, settings, stream_settings FROM inbounds WHERE enable = 1").fetchall()
+        traffic_map = {row['email']: dict(row) for row in conn.execute("SELECT email, up, down, total, expiry_time FROM client_traffics").fetchall()}
         conn.close()
         inbounds_data = defaultdict(list)
         for inbound in all_inbounds:
@@ -265,12 +258,32 @@ def display_page():
                 for client in clients:
                     email = client.get('email')
                     if not email: continue
+
+                    client_traffic = traffic_map.get(email, {})
+                    usage_bytes = client_traffic.get('up', 0) + client_traffic.get('down', 0)
+                    total_bytes = client_traffic.get('total', 0)
+                    expiry_time = client_traffic.get('expiry_time', 0)
+                    expiry_date_str = 'Never'
+                    if expiry_time > 0:
+                        try:
+                            expiry_date_str = datetime.fromtimestamp(expiry_time / 1000).strftime('%Y-%m-%d')
+                        except (ValueError, OSError): expiry_date_str = 'Invalid Date'
+
                     link = generate_single_config_link(client['id'], email, inbound, inbound_stream_settings, panel_settings)
                     qr_img = qrcode.make(link)
                     buffered = BytesIO()
                     qr_img.save(buffered, format="PNG")
                     img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                    inbounds_data[inbound_remark].append({'email': email, 'link': link, 'qr_code': f"data:image/png;base64,{img_str}"})
+
+                    # *** بخش اصلاح شده: اضافه کردن اطلاعات جا افتاده ***
+                    inbounds_data[inbound_remark].append({
+                        'email': email,
+                        'link': link,
+                        'qr_code': f"data:image/png;base64,{img_str}",
+                        'usage_gb': usage_bytes / (1024**3),
+                        'total_gb': total_bytes / (1024**3),
+                        'expiry_date': expiry_date_str
+                    })
             except (json.JSONDecodeError, TypeError): continue
         return render_template('display_page.html', inbounds_data=dict(inbounds_data))
     except Exception as e: return f"An error occurred: {e}"
