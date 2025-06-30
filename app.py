@@ -1,26 +1,19 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-import sqlite3
-import json
+import sqlite3, json, subprocess, hashlib, os, uuid, time
 from collections import defaultdict
-import subprocess
-import hashlib
 from functools import wraps
-import os
-import uuid
-import time
 from datetime import datetime
 
-# --- تنظیمات (بدون تغییر) ---
+# --- تنظیمات ---
 DB_PATH = '/etc/x-ui/x-ui.db'
 WHITELIST_FILE = '/root/sync_whitelist.txt'
 SYNC_SCRIPT_PATH = '/root/the_final_sync.py'
 STATE_FILE = '/root/sync_state.json'
 
 app = Flask(__name__)
-app.secret_key = 'the-absolute-final-key-for-this-ultimate-panel'
+app.secret_key = 'a-final-super-strong-and-unguessable-secret-key-reborn-v2'
 
 # --- توابع کمکی ---
-# توابع کمکی قبلی مانند load_state, save_state و ... بدون تغییر هستند
 def load_state():
     if not os.path.exists(STATE_FILE): return {}
     try:
@@ -35,27 +28,29 @@ def get_whitelisted_groups():
 def save_whitelisted_groups(groups_to_save):
     with open(WHITELIST_FILE, 'w') as f:
         for group in groups_to_save: f.write(f"{group}\n")
+
+# *** اصلاح شده: نمایش تمام اینباندها (فعال و غیرفعال) ***
 def get_all_inbounds_info():
     try:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
-        inbounds = conn.execute("SELECT id, remark, port, protocol FROM inbounds WHERE enable = 1").fetchall()
+        # حذف شرط enable=1 برای نمایش تمام اینباندها
+        inbounds = conn.execute("SELECT id, remark, port, protocol, enable FROM inbounds").fetchall()
         conn.close()
-        return [{'id': i['id'], 'remark': i['remark'], 'port': i['port'], 'protocol': i['protocol']} for i in inbounds]
+        return [{'id': i['id'], 'remark': i['remark'], 'port': i['port'], 'protocol': i['protocol'], 'enable': i['enable']} for i in inbounds]
     except Exception: return []
 
-# *** تابع اصلی خواندن اطلاعات گروه ها با منطق اصلاح شده برای نمایش مجموع حجم کل ***
+# *** اصلاح شده: تابع اصلی خواندن اطلاعات با منطق جدید برای نمایش مجموع مصرف ***
 def get_all_groups_with_full_details():
     try:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-
         traffic_map = {row['email']: dict(row) for row in cursor.execute("SELECT email, up, down, total, expiry_time FROM client_traffics").fetchall()}
-        all_inbounds = cursor.execute("SELECT settings FROM inbounds WHERE enable = 1").fetchall()
+        all_inbounds = cursor.execute("SELECT settings FROM inbounds").fetchall() # خواندن همه اینباندها
         conn.close()
 
-        groups_with_details = defaultdict(lambda: {'clients': []})
+        groups_with_details = defaultdict(lambda: {'clients': [], 'total_usage_group': 0, 'expiry_date_group': 'N/A'})
 
         for inbound in all_inbounds:
             if not inbound['settings']: continue
@@ -74,26 +69,16 @@ def get_all_groups_with_full_details():
                             if expiry_time > 0:
                                 try:
                                     expiry_date_str = datetime.fromtimestamp(expiry_time / 1000).strftime('%Y-%m-%d')
-                                except ValueError: expiry_date_str = 'Invalid Date'
+                                except (ValueError, OSError): expiry_date_str = 'Invalid Date'
 
-                            client_info = {
-                                'email': email,
-                                'usage_gb': usage_bytes / (1024**3),
-                                'total_gb': total_bytes / (1024**3),
-                                'expiry_date': expiry_date_str
-                            }
+                            client_info = {'email': email, 'usage_gb': usage_bytes / (1024**3), 'total_gb': total_bytes / (1024**3), 'expiry_date': expiry_date_str}
                             groups_with_details[sub_id]['clients'].append(client_info)
             except (json.JSONDecodeError, TypeError): continue
 
-        # *** بخش اصلاح شده ***
-        # محاسبه اطلاعات کلی گروه بر اساس مجموع کل اعضا
         for sub_id, data in groups_with_details.items():
             if data['clients']:
-                # مجموع حجم کل تمام کاربران گروه
-                total_limit_for_group = sum(c['total_gb'] for c in data['clients'])
-                data['total_gb_group'] = total_limit_for_group
-
-                # تاریخ انقضای اولین کاربر به عنوان مرجع
+                # مجموع حجم مصرفی تمام اعضای گروه
+                data['total_usage_group'] = sum(c['usage_gb'] for c in data['clients'])
                 data['expiry_date_group'] = data['clients'][0]['expiry_date']
 
         return dict(sorted(groups_with_details.items()))
@@ -101,22 +86,20 @@ def get_all_groups_with_full_details():
         print(f"Error getting group full details: {e}")
         return {}
 
-# --- سیستم لاگین و سایر روت ها (بدون تغییر) ---
+# --- سیستم لاگین (بدون تغییر) ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'logged_in' not in session: return redirect(url_for('login', next=request.url))
         return f(*args, **kwargs)
     return decorated_function
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # کد این بخش بدون تغییر است
+    # ... کد این بخش بدون تغییر است ...
     if request.method == 'POST':
         username, password = request.form['username'], request.form['password']
         try:
-            conn = sqlite3.connect(DB_PATH)
-            conn.row_factory = sqlite3.Row
+            conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
             user = conn.execute("SELECT password FROM users WHERE username = ?", (username,)).fetchone()
             conn.close()
             if user and user['password'] == password:
@@ -126,23 +109,17 @@ def login():
         except Exception as e: flash(f'An error occurred: {e}', 'danger')
     return render_template('login.html')
 
-
 @app.route('/logout')
-def logout():
-    # کد این بخش بدون تغییر است
-    session.clear()
-    return redirect(url_for('login'))
+def logout(): session.clear(); return redirect(url_for('login'))
 
+# --- مسیرهای اصلی برنامه ---
 @app.route('/')
 @login_required
-def index():
-    # کد این بخش بدون تغییر است
-    return redirect(url_for('sync_management'))
+def index(): return redirect(url_for('sync_management'))
 
 @app.route('/sync_management')
 @login_required
 def sync_management():
-    # کد این بخش بدون تغییر است
     sync_output = session.pop('sync_output', None)
     all_groups_data = get_all_groups_with_full_details()
     whitelisted_groups = get_whitelisted_groups()
@@ -151,56 +128,108 @@ def sync_management():
 @app.route('/add_client_page')
 @login_required
 def add_client_page():
-    # کد این بخش بدون تغییر است
     all_inbounds = get_all_inbounds_info()
     return render_template('add_client.html', all_inbounds=all_inbounds)
 
-@app.route('/edit_group', methods=['POST'])
+# --- روت های مربوط به عملیات (Actions) ---
+
+def get_clients_for_subid(sub_id):
+    """یک تابع کمکی برای پیدا کردن ایمیل های یک گروه"""
+    all_groups = get_all_groups_with_full_details()
+    return [client['email'] for client in all_groups.get(sub_id, {}).get('clients', [])]
+
+@app.route('/sync_sum', methods=['POST'])
 @login_required
-def edit_group():
-    # کد این بخش بدون تغییر است
+def sync_sum():
+    """منطق جدید: ترافیک ها را جمع کرده و سینک می کند"""
     try:
         sub_id = request.form['sub_id']
-        new_usage_gb_str = request.form.get('new_usage_gb')
-        new_total_gb_str = request.form.get('new_total_gb')
-        new_expiry_days_str = request.form.get('new_expiry_days')
-
-        all_groups = get_all_groups_with_full_details()
-        clients_in_group = [client['email'] for client in all_groups.get(sub_id, {}).get('clients', [])]
-
+        clients_in_group = get_clients_for_subid(sub_id)
         if not clients_in_group:
-            flash(f'Group "{sub_id}" not found or has no members.', 'warning')
+            flash(f'Group "{sub_id}" not found.', 'warning')
             return redirect(url_for('sync_management'))
 
-        update_fields = []
-        update_params = []
-        if new_usage_gb_str:
-            new_usage_bytes = int(float(new_usage_gb_str) * (1024**3))
-            update_fields.append("up = ?"); update_fields.append("down = 0"); update_params.append(new_usage_bytes)
-            state = load_state(); state[sub_id] = {'total_usage': new_usage_bytes, 'client_usages': {email: new_usage_bytes for email in clients_in_group}}; save_state(state)
+        conn = sqlite3.connect(DB_PATH)
+        placeholders = ','.join('?' for _ in clients_in_group)
+        traffic_rows = conn.execute(f"SELECT up, down FROM client_traffics WHERE email IN ({placeholders})", clients_in_group).fetchall()
+
+        total_usage_bytes = sum(row[0] + row[1] for row in traffic_rows)
+
+        conn.execute(f"UPDATE client_traffics SET up = ?, down = 0 WHERE email IN ({placeholders})", [total_usage_bytes] + clients_in_group)
+        conn.commit()
+        conn.close()
+
+        state = load_state(); state[sub_id] = {'total_usage': total_usage_bytes, 'client_usages': {email: total_usage_bytes for email in clients_in_group}}; save_state(state)
+        flash(f'Group "{sub_id}" synced by SUM. New total usage: {total_usage_bytes / (1024**3):.2f} GB.', 'success')
+    except Exception as e:
+        flash(f'An error occurred during SUM sync: {e}', 'danger')
+    return redirect(url_for('sync_management'))
+
+
+@app.route('/sync_max', methods=['POST'])
+@login_required
+def sync_max():
+    """منطق جدید: بیشترین مصرف را پیدا کرده و سینک می کند"""
+    try:
+        sub_id = request.form['sub_id']
+        clients_in_group = get_clients_for_subid(sub_id)
+        if not clients_in_group:
+            flash(f'Group "{sub_id}" not found.', 'warning')
+            return redirect(url_for('sync_management'))
+
+        conn = sqlite3.connect(DB_PATH)
+        placeholders = ','.join('?' for _ in clients_in_group)
+        traffic_rows = conn.execute(f"SELECT up, down FROM client_traffics WHERE email IN ({placeholders})", clients_in_group).fetchall()
+
+        max_usage_bytes = 0
+        if traffic_rows:
+            max_usage_bytes = max(row[0] + row[1] for row in traffic_rows)
+
+        conn.execute(f"UPDATE client_traffics SET up = ?, down = 0 WHERE email IN ({placeholders})", [max_usage_bytes] + clients_in_group)
+        conn.commit()
+        conn.close()
+
+        state = load_state(); state[sub_id] = {'total_usage': max_usage_bytes, 'client_usages': {email: max_usage_bytes for email in clients_in_group}}; save_state(state)
+        flash(f'Group "{sub_id}" synced by MAX. New usage set to: {max_usage_bytes / (1024**3):.2f} GB.', 'success')
+    except Exception as e:
+        flash(f'An error occurred during MAX sync: {e}', 'danger')
+    return redirect(url_for('sync_management'))
+
+
+@app.route('/set_limits', methods=['POST'])
+@login_required
+def set_limits():
+    """فقط حجم کل و تاریخ انقضا را تنظیم می کند"""
+    try:
+        sub_id = request.form['sub_id']
+        new_total_gb_str = request.form.get('new_total_gb')
+        new_expiry_days_str = request.form.get('new_expiry_days')
+        clients_in_group = get_clients_for_subid(sub_id)
+        if not clients_in_group:
+            flash(f'Group "{sub_id}" not found.', 'warning')
+            return redirect(url_for('sync_management'))
+
+        update_fields, update_params = [], []
         if new_total_gb_str:
-            new_total_bytes = int(float(new_total_gb_str) * (1024**3)); update_fields.append("total = ?"); update_params.append(new_total_bytes)
+            update_fields.append("total = ?"); update_params.append(int(float(new_total_gb_str) * (1024**3)))
         if new_expiry_days_str:
-            new_expiry_time = int((time.time() + int(new_expiry_days_str) * 24 * 60 * 60) * 1000); update_fields.append("expiry_time = ?"); update_params.append(new_expiry_time)
+            update_fields.append("expiry_time = ?"); update_params.append(int((time.time() + int(new_expiry_days_str) * 24 * 60 * 60) * 1000))
 
         if not update_fields:
             flash('No new values provided to set.', 'info'); return redirect(url_for('sync_management'))
 
         conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
         placeholders = ','.join('?' for _ in clients_in_group)
         sql_update = f"UPDATE client_traffics SET {', '.join(update_fields)} WHERE email IN ({placeholders})"
-        final_params = update_params + clients_in_group
-        cursor.execute(sql_update, final_params)
+        conn.execute(sql_update, update_params + clients_in_group)
         conn.commit()
         conn.close()
-        flash(f'Successfully updated {cursor.rowcount} clients in group "{sub_id}".', 'success')
+        flash(f'Successfully updated limits for group "{sub_id}".', 'success')
     except Exception as e:
         flash(f'An error occurred: {e}', 'danger')
     return redirect(url_for('sync_management'))
 
-# سایر روت های اکشن نیز بدون تغییر هستند
-# ...
+# (سایر روت ها مانند add_client, save_whitelist, sync_now بدون تغییر باقی می مانند)
 @app.route('/add_client', methods=['POST'])
 @login_required
 def add_client():
@@ -250,10 +279,7 @@ def sync_now():
     except Exception as e:
         session['sync_output'] = f"Failed to run sync script: {e}"
         flash('Error executing sync script.', 'danger')
-    return redirect(url_for('sync_management')
-
-
+    return redirect(url_for('sync_management'))
 if __name__ == '__main__':
-    # خواندن پورت از متغیر محیطی سیستم، با مقدار پیش فرض 5001
     port = int(os.environ.get('SYNC_MANAGER_PORT', 5001))
     app.run(host='0.0.0.0', port=port)
