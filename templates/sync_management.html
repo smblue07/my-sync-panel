@@ -19,16 +19,30 @@
     .client-list li { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
     .client-usage { font-weight: 600; color: #2980b9; }
     .action-forms { padding-top: 15px; border-top: 1px dashed #ced4da; }
-    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .edit-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: flex-end; }
     .form-group { display: flex; flex-direction: column; }
     .form-group label { font-size: 12px; margin-bottom: 4px; color: #495057; }
     .form-group input { padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
-    .btn { border: none; padding: 10px 15px; font-size: 14px; border-radius: 8px; cursor: pointer; color: white; width: 100%; }
+    .btn { border: none; padding: 10px 15px; font-size: 14px; border-radius: 8px; cursor: pointer; color: white; width: 100%; box-sizing: border-box; }
     .btn-set-limits { background-color: #5bc0de; }
-    .sync-buttons { display: flex; gap: 10px; grid-column: span 2; }
-    .sync-buttons form { flex: 1; }
+
+    /* === بخش اصلاح شده نهایی برای چیدمان دکمه ها === */
+    .sync-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .sync-buttons form {
+        /* به جای flex:1 از محاسبه دقیق عرض استفاده می کنیم */
+        /* 50% منهای نصف فاصله بین دکمه ها */
+        width: calc(50% - 5px); 
+        display: flex;
+    }
     .btn-sum { background-color: #f0ad4e; }
     .btn-max { background-color: #5cb85c; }
+    /* === پایان بخش اصلاح شده === */
+
     .main-actions { display: flex; margin-top: 25px; }
     .btn-save-whitelist { background-color: #8e44ad; width: 100%; }
     .btn-auto-sync { background-color: #337ab7; width: 100%; }
@@ -70,7 +84,7 @@
                                 <button type="submit" class="btn btn-max">Sync (Set to Max)</button>
                             </form>
                         </div>
-                        <form action="{{ url_for('set_limits') }}" method="post" class="action-grid" style="margin-top: 10px;">
+                        <form action="{{ url_for('set_limits') }}" method="post" class="edit-form">
                             <input type="hidden" name="sub_id" value="{{ group_name }}">
                             <div class="form-group">
                                 <label>Set Total (GB)</label>
