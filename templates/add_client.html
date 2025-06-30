@@ -11,6 +11,20 @@
     .full-width { grid-column: span 2; }
     .inbound-list { max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .btn-add { border: none; padding: 12px 20px; font-size: 15px; font-weight: 500; border-radius: 8px; cursor: pointer; color: white; background-color: #3498db; width: 100%; margin-top: 15px; }
+
+    /* === استایل جدید برای آیکن وضعیت === */
+    .inbound-item { display: flex; align-items: center; }
+    .status-icon {
+        height: 10px;
+        width: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+        flex-shrink: 0; /* جلوگیری از کوچک شدن آیکن */
+    }
+    .status-icon.active { background-color: #2ecc71; /* سبز */ }
+    .status-icon.inactive { background-color: #bdc3c7; /* طوسی */ }
+    /* === پایان استایل جدید === */
 </style>
 <div class="add-panel">
     <h2>Add New Client</h2>
@@ -36,7 +50,8 @@
                 <label>Add to Inbounds</label>
                 <div class="inbound-list">
                     {% for inbound in all_inbounds %}
-                    <div>
+                    <div class="inbound-item">
+                        <span class="status-icon {{ 'active' if inbound.enable else 'inactive' }}"></span>
                         <input type="checkbox" name="inbounds" value="{{ inbound.id }}" id="inbound-{{ inbound.id }}">
                         <label for="inbound-{{ inbound.id }}">{{ inbound.remark or "Untitled" }} ({{ inbound.protocol }} / {{ inbound.port }})</label>
                     </div>
