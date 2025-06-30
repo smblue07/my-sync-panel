@@ -24,7 +24,7 @@
 <nav class="nav">
     <a href="{{ url_for('sync_management') }}" class="{{ 'active' if request.endpoint == 'sync_management' else '' }}">Sync Management</a>
     <a href="{{ url_for('add_client_page') }}" class="{{ 'active' if request.endpoint == 'add_client_page' else '' }}">Add Client</a>
-    <a href="{{ url_for('display_configs') }}" class="{{ 'active' if request.endpoint == 'display_configs' else '' }}">Public Display</a>
+    <a href="{{ url_for('display_page') }}" class="{{ 'active' if request.endpoint == 'display_page' else '' }}">Configs Display</a>
 </nav>
         <div class="user-info">
             {% if session.logged_in %}
