@@ -21,10 +21,11 @@
 <body>
     <header class="top-bar">
         <div class="logo">Ultimate Manager</div>
-        <nav class="nav">
-            <a href="{{ url_for('sync_management') }}" class="{{ 'active' if request.endpoint == 'sync_management' else '' }}">Sync Management</a>
-            <a href="{{ url_for('add_client_page') }}" class="{{ 'active' if request.endpoint == 'add_client_page' else '' }}">Add Client</a>
-        </nav>
+<nav class="nav">
+    <a href="{{ url_for('sync_management') }}" class="{{ 'active' if request.endpoint == 'sync_management' else '' }}">Sync Management</a>
+    <a href="{{ url_for('add_client_page') }}" class="{{ 'active' if request.endpoint == 'add_client_page' else '' }}">Add Client</a>
+    <a href="{{ url_for('display_configs') }}" class="{{ 'active' if request.endpoint == 'display_configs' else '' }}">Public Display</a>
+</nav>
         <div class="user-info">
             {% if session.logged_in %}
             <span>Welcome, {{ session.username }}! <a href="{{ url_for('logout') }}">Logout</a></span>
