@@ -36,7 +36,7 @@
 برای نصب کامل این پنل مدیریتی روی یک سرور جدید، کافیست دستور زیر را اجرا کنید. اسکریپت به صورت هوشمند شماره پورت مورد نظر شما را پرسیده و تمام مراحل را به صورت خودکار انجام می‌دهد.
 
 ```bash
-wget -O install.sh [https://raw.githubusercontent.com/smblue07/my-sync-panel/main/install.sh](https://raw.githubusercontent.com/smblue07/my-sync-panel/main/install.sh) && chmod +x install.sh && ./install.sh
+wget -O install.sh https://raw.githubusercontent.com/smblue07/my-sync-panel/main/install.sh && chmod +x install.sh && ./install.sh
 ```
 **توجه:** آدرس بالا را با آدرس `install.sh` در ریپازیتوری گیت‌هاب خودتان جایگزین کنید.
 
