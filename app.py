@@ -3,7 +3,9 @@ import sqlite3, json, subprocess, hashlib, os, uuid, time
 from collections import defaultdict
 from functools import wraps
 from datetime import datetime
-
+import qrcode, base64
+from io import BytesIO
+import urllib.parse
 # --- تنظیمات ---
 DB_PATH = '/etc/x-ui/x-ui.db'
 WHITELIST_FILE = '/root/sync_whitelist.txt'
