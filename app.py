@@ -1,57 +1,44 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, g
-from flask_babel import Babel, _
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 import sqlite3, json, subprocess, hashlib, os, uuid, time
 from collections import defaultdict
 from functools import wraps
 from datetime import datetime
+from io import BytesIO
+import qrcode
+import urllib.parse
 
 # --- تنظیمات ---
 DB_PATH = '/etc/x-ui/x-ui.db'
 SYNC_SCRIPT_PATH = '/root/the_final_sync.py'
 STATE_FILE = '/root/sync_state.json'
-# فایل لیست سفید را دوباره اضافه می کنیم
-WHITELIST_FILE = '/root/sync_whitelist.txt' 
+WHITELIST_FILE = '/root/sync_whitelist.txt'
 
 app = Flask(__name__)
-app.secret_key = 'a-super-duper-secret-key-for-i18n-and-dark-mode'
+app.secret_key = 'a-simple-final-key-single-language'
 
-# --- پیکربندی Babel برای چند زبانه کردن ---
-babel = Babel(app)
-app.config['LANGUAGES'] = {
-    'en': 'English',
-    'fa': 'فارسی'
-}
-
-@babel.localeselector
-def get_locale():
-    # اگر کاربر زبانی را در نشست (session) انتخاب کرده، از آن استفاده کن
-    if 'language' in session:
-        return session['language']
-    # در غیر این صورت، بهترین زبان را از هدرهای مرورگر کاربر انتخاب کن
-    return request.accept_languages.best_match(app.config['LANGUAGES'].keys())
-
-@app.before_request
-def before_request():
-    # زبان فعلی را در g ذخیره می کنیم تا در تمام قالب ها در دسترس باشد
-    g.locale = str(get_locale())
-
-# --- روت جدید برای تغییر زبان ---
-@app.route('/language/<language>')
-def set_language(language=None):
-    session['language'] = language
-    # کاربر را به صفحه ای که از آن آمده بود باز می گردانیم
-    return redirect(request.referrer)
-
-
-# --- تمام توابع کمکی و روت های دیگر ---
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session:
-            return redirect(url_for('login', next=request.url))
-        return f(*args, **kwargs)
-    return decorated_function
-
+# --- توابع کمکی ---
+def load_state():
+    if not os.path.exists(STATE_FILE): return {}
+    try:
+        with open(STATE_FILE, 'r') as f: return json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError): return {}
+def save_state(state_data):
+    with open(STATE_FILE, 'w') as f: json.dump(state_data, f, indent=4)
+def get_whitelisted_groups():
+    try:
+        with open(WHITELIST_FILE, 'r') as f: return {line.strip() for line in f if line.strip()}
+    except FileNotFoundError: return set()
+def save_whitelisted_groups(groups_to_save):
+    with open(WHITELIST_FILE, 'w') as f:
+        for group in groups_to_save: f.write(f"{group}\n")
+def get_all_inbounds_info():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        inbounds = conn.execute("SELECT id, remark, port, protocol, enable FROM inbounds").fetchall()
+        conn.close()
+        return [{'id': i['id'], 'remark': i['remark'], 'port': i['port'], 'protocol': i['protocol'], 'enable': i['enable']} for i in inbounds]
+    except Exception: return []
 def get_all_groups_with_full_details():
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -84,13 +71,22 @@ def get_all_groups_with_full_details():
         for sub_id, data in groups_with_details.items():
             if data['clients']:
                 data['total_usage_group'] = sum(c['usage_gb'] for c in data['clients'])
+                data['expiry_date_group'] = data['clients'][0]['expiry_date']
         return dict(sorted(groups_with_details.items()))
     except Exception as e:
         print(f"Error getting group full details: {e}")
         return {}
+def get_clients_for_subid(sub_id):
+    all_groups = get_all_groups_with_full_details()
+    return [client['email'] for client in all_groups.get(sub_id, {}).get('clients', [])]
 
-# ... (تمام روت های دیگر شما باید در اینجا باشند و متن هایشان با _() پوشانده شوند) ...
-# (این یک مثال است و شما باید این الگو را برای تمام روت های خود اعمال کنید)
+# --- سیستم لاگین ---
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session: return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -101,13 +97,100 @@ def login():
             conn.close()
             if user and user['password'] == password:
                 session['logged_in'], session['username'] = True, username
-                flash(_('You were successfully logged in'), 'success')
+                flash('You were successfully logged in', 'success')
                 return redirect(request.args.get('next') or url_for('volume_adjustment'))
-            else:
-                flash(_('Invalid username or password.'), 'danger')
-        except Exception as e:
-            flash(_('An error occurred: %(error)s', error=e), 'danger')
+            else: flash('Invalid username or password.', 'danger')
+        except Exception as e: flash(f'An error occurred: {e}', 'danger')
     return render_template('login.html')
+@app.route('/logout')
+def logout(): session.clear(); return redirect(url_for('login'))
+    
+# --- مسیرهای اصلی برنامه ---
+@app.route('/')
+@login_required
+def index(): return redirect(url_for('volume_adjustment'))
+@app.route('/volume_adjustment')
+@login_required
+def volume_adjustment():
+    all_groups_data = get_all_groups_with_full_details()
+    return render_template('volume_adjustment.html', all_groups_data=all_groups_data)
+@app.route('/add_client_page')
+@login_required
+def add_client_page():
+    all_inbounds = get_all_inbounds_info()
+    return render_template('add_client.html', all_inbounds=all_inbounds)
+
+# --- روت های مربوط به عملیات (Actions) ---
+@app.route('/add_client', methods=['POST'])
+@login_required
+def add_client():
+    try:
+        base_email = request.form['email']
+        sub_id = request.form['sub_id']
+        total_gb = int(request.form.get('total_gb', 0))
+        expiry_days = int(request.form.get('expiry_days', 0))
+        selected_inbound_ids = [int(i) for i in request.form.getlist('inbounds')]
+        if not base_email or not selected_inbound_ids:
+            flash('Email and at least one inbound are required.', 'danger')
+            return redirect(url_for('add_client_page'))
+        conn = sqlite3.connect(DB_PATH); cursor = conn.cursor()
+        for i, inbound_id in enumerate(selected_inbound_ids, 1):
+            unique_email = f"{base_email}-{i}" if len(selected_inbound_ids) > 1 else base_email
+            new_client_uuid = str(uuid.uuid4())
+            expiry_time = 0
+            if expiry_days > 0: expiry_time = int((time.time() + expiry_days * 24 * 60 * 60) * 1000)
+            total_bytes = total_gb * (1024**3)
+            new_client_obj = {"id": new_client_uuid, "flow": "", "email": unique_email, "limitIp": 0, "totalGB": total_bytes, "expiryTime": expiry_time, "enable": True, "tgId": "", "subId": sub_id, "reset": 0}
+            settings_str = cursor.execute("SELECT settings FROM inbounds WHERE id = ?", (inbound_id,)).fetchone()[0]
+            settings = json.loads(settings_str)
+            settings['clients'].append(new_client_obj)
+            cursor.execute("UPDATE inbounds SET settings = ? WHERE id = ?", (json.dumps(settings), inbound_id))
+            cursor.execute("INSERT INTO client_traffics (inbound_id, enable, email, up, down, expiry_time, total) VALUES (?, ?, ?, ?, ?, ?, ?)", (inbound_id, True, unique_email, 0, 0, expiry_time, total_bytes))
+        conn.commit(); conn.close()
+        flash(f'User creation process completed for base email "{base_email}"!', 'success')
+    except Exception as e: flash(f'An error occurred while adding user: {e}', 'danger')
+    return redirect(url_for('add_client_page'))
+@app.route('/set_individual_usage', methods=['POST'])
+@login_required
+def set_individual_usage():
+    try:
+        email = request.form['email']
+        sub_id = request.form['sub_id']
+        usage_gb = float(request.form.get('usage_gb', 0))
+        new_usage_bytes = int(usage_gb * (1024**3))
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("UPDATE client_traffics SET up = ?, down = 0 WHERE email = ?", (new_usage_bytes, email))
+        conn.commit()
+        conn.close()
+        state = load_state()
+        if sub_id in state and email in state[sub_id]['client_usages']:
+            old_email_usage = state[sub_id]['client_usages'][email]
+            state[sub_id]['total_usage'] += (new_usage_bytes - old_email_usage)
+            state[sub_id]['client_usages'][email] = new_usage_bytes
+            save_state(state)
+        flash(f'Usage for user "{email}" was set to {usage_gb} GB.', 'success')
+    except Exception as e:
+        flash(f'An error occurred: {e}', 'danger')
+    return redirect(url_for('volume_adjustment'))
+@app.route('/set_group_usage', methods=['POST'])
+@login_required
+def set_group_usage():
+    try:
+        sub_id = request.form['sub_id']
+        usage_gb = float(request.form.get('usage_gb', 0))
+        new_usage_bytes = int(usage_gb * (1024**3))
+        clients_in_group = get_clients_for_subid(sub_id)
+        if not clients_in_group: flash(f'Group "{sub_id}" not found.', 'warning'); return redirect(url_for('volume_adjustment'))
+        conn = sqlite3.connect(DB_PATH)
+        placeholders = ','.join('?' for _ in clients_in_group)
+        conn.execute(f"UPDATE client_traffics SET up = ?, down = 0 WHERE email IN ({placeholders})", [new_usage_bytes] + clients_in_group)
+        conn.commit(); conn.close()
+        state = load_state(); state[sub_id] = {'total_usage': new_usage_bytes, 'client_usages': {email: new_usage_bytes for email in clients_in_group}}; save_state(state)
+        flash(f'Total usage for group "{sub_id}" was set to {usage_gb} GB for all members.', 'success')
+    except Exception as e: flash(f'An error occurred: {e}', 'danger')
+    return redirect(url_for('volume_adjustment'))
+# ... (سایر روت های مدیریت گروه مانند sync_sum_group, sync_max_group, set_limits نیز به همین شکل باقی می مانند)
+# ...
 
 if __name__ == '__main__':
     port = int(os.environ.get('SYNC_MANAGER_PORT', 5001))
