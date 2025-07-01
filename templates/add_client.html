@@ -1,53 +1,44 @@
 {% extends "base.html" %}
-{% block title %}Add New Client{% endblock %}
+{% block title %}{{ _('Add New Client') }}{% endblock %}
 {% block content %}
 <style>
-    .add-panel { max-width: 900px; margin: 0 auto; background: #fff; padding: 25px 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    h2 { margin-top: 0; }
+    .add-panel { max-width: 900px; margin: 0 auto; background: var(--panel-bg); padding: 25px 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; color: var(--text-color); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .form-group { display: flex; flex-direction: column; }
-    .form-group label { margin-bottom: 8px; font-weight: 500; }
-    .form-group input { padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+    .form-group label { margin-bottom: 8px; font-weight: 500; color: var(--text-color-light); }
+    .form-group input { padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color); color: var(--text-color); }
     .full-width { grid-column: span 2; }
-    .inbound-list { max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .btn-add { border: none; padding: 12px 20px; font-size: 15px; font-weight: 500; border-radius: 8px; cursor: pointer; color: white; background-color: #3498db; width: 100%; margin-top: 15px; }
-
-    /* === استایل جدید برای آیکن وضعیت === */
+    .inbound-list { max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .inbound-item { display: flex; align-items: center; }
-    .status-icon {
-        height: 10px;
-        width: 10px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 8px;
-        flex-shrink: 0; /* جلوگیری از کوچک شدن آیکن */
-    }
-    .status-icon.active { background-color: #2ecc71; /* سبز */ }
-    .status-icon.inactive { background-color: #bdc3c7; /* طوسی */ }
-    /* === پایان استایل جدید === */
+    .inbound-item label { font-weight: normal !important; }
+    .btn-add { border: none; padding: 12px 20px; font-size: 15px; font-weight: 500; border-radius: 8px; cursor: pointer; color: white; background-color: var(--accent-color); width: 100%; margin-top: 15px; }
+    .status-icon { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; flex-shrink: 0; }
+    .status-icon.active { background-color: #2ecc71; }
+    .status-icon.inactive { background-color: #95a5a6; }
 </style>
 <div class="add-panel">
-    <h2>Add New Client</h2>
+    <h2>{{ _('Add New Client') }}</h2>
     <form action="{{ url_for('add_client') }}" method="post">
         <div class="form-grid">
             <div class="form-group">
-                <label for="email">Client Email/Remark</label>
+                <label for="email">{{ _('Client Email/Remark') }}</label>
                 <input type="text" id="email" name="email" required>
             </div>
             <div class="form-group">
-                <label for="sub_id">Subscription ID (subId)</label>
-                <input type="text" id="sub_id" name="sub_id" placeholder="e.g., new_group_name">
+                <label for="sub_id">{{ _('Subscription ID (subId)') }}</label>
+                <input type="text" id="sub_id" name="sub_id" placeholder="{{ _('e.g., new_group_name') }}">
             </div>
             <div class="form-group">
-                <label for="total_gb">Traffic Limit (GB)</label>
+                <label for="total_gb">{{ _('Traffic Limit (GB)') }}</label>
                 <input type="number" id="total_gb" name="total_gb" value="0" min="0">
             </div>
             <div class="form-group">
-                <label for="expiry_days">Expiry (in days from now)</label>
+                <label for="expiry_days">{{ _('Expiry (in days from now)') }}</label>
                 <input type="number" id="expiry_days" name="expiry_days" value="0" min="0">
             </div>
             <div class="form-group full-width">
-                <label>Add to Inbounds</label>
+                <label>{{ _('Add to Inbounds') }}</label>
                 <div class="inbound-list">
                     {% for inbound in all_inbounds %}
                     <div class="inbound-item">
@@ -59,7 +50,7 @@
                 </div>
             </div>
         </div>
-        <button type="submit" class="btn btn-add">Add Client</button>
+        <button type="submit" class="btn-add">{{ _('Add Client') }}</button>
     </form>
 </div>
 {% endblock %}
