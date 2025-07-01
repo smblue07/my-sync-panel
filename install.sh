@@ -38,8 +38,8 @@ cd ${INSTALL_DIR}
 echo "[4/5] Creating systemd service file..."
 SERVICE_FILE_CONTENT="[Unit]
 Description=Gunicorn instance to serve the Ultimate Sync Manager
-After=network.target 3x-ui.service
-BindsTo=3x-ui.service
+After=network.target x-ui.service
+BindsTo=x-ui.service
 [Service]
 User=root
 WorkingDirectory=${INSTALL_DIR}
