@@ -1,18 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="html-tag">
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}Sync Manager{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 20px auto; padding: 10px 20px; background-color: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .top-bar .logo { font-size: 24px; color: #2c3e50; font-weight: 600; }
-        .top-bar .nav { display: flex; gap: 15px; }
+        /* تعریف متغیرهای رنگی برای دو تم */
+        :root {
+            --bg-color: #f0f2f5;
+            --panel-bg: #ffffff;
+            --text-color: #333;
+            --text-color-light: #6c757d;
+            --border-color: #e9ecef;
+            --accent-color: #3498db;
+            --header-bg: #ffffff;
+            --header-shadow: rgba(0,0,0,0.08);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-color-light: #888;
+            --border-color: #333;
+            --accent-color: #4a90e2;
+            --header-bg: #1e1e1e;
+            --header-shadow: rgba(255,255,255,0.08);
+        }
+
+        /* استفاده از متغیرها در استایل های اصلی */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: background-color 0.3s, color 0.3s; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 20px auto; padding: 10px 20px; background-color: var(--header-bg); border-radius: 12px; box-shadow: 0 4px 12px var(--header-shadow); transition: background-color 0.3s; }
+        .top-bar .logo { font-size: 24px; color: var(--text-color); font-weight: 600; }
+        .top-bar .nav { display: flex; gap: 10px; align-items: center; }
         .top-bar .nav a { text-decoration: none; padding: 8px 15px; border-radius: 8px; font-weight: 500; transition: background-color 0.2s, color 0.2s; }
-        .top-bar .nav a.active { background-color: #3498db; color: white; }
-        .top-bar .nav a:not(.active) { color: #34495e; background-color: #ecf0f1; }
+        .top-bar .nav a.active { background-color: var(--accent-color); color: white; }
+        .top-bar .nav a:not(.active) { color: var(--text-color); background-color: var(--border-color); }
         .top-bar .user-info a { text-decoration: none; background: #e74c3c; color: white; padding: 8px 15px; border-radius: 8px; font-weight: 500; }
+
+        #theme-toggle-btn { background: none; border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+
         .flash-messages { list-style: none; padding: 0; max-width: 1400px; margin: 0 auto 20px auto; }
         .flash-messages li { padding: 15px; border-radius: 8px; color: white; margin-bottom: 10px; }
         .flash-success { background-color: #2ecc71; } .flash-danger { background-color: #e74c3c; } .flash-info { background-color: #3498db; }
@@ -21,10 +48,11 @@
 <body>
     <header class="top-bar">
         <div class="logo">Ultimate Manager</div>
-<nav class="nav">
-    <a href="{{ url_for('volume_adjustment') }}" class="{{ 'active' if request.endpoint == 'volume_adjustment' else '' }}">Volume Adjustment</a>
-    <a href="{{ url_for('add_client_page') }}" class="{{ 'active' if request.endpoint == 'add_client_page' else '' }}">Add Client</a>
-</nav>
+        <nav class="nav">
+            <a href="{{ url_for('volume_adjustment') }}" class="{{ 'active' if request.endpoint == 'volume_adjustment' else '' }}">Volume Adjustment</a>
+            <a href="{{ url_for('add_client_page') }}" class="{{ 'active' if request.endpoint == 'add_client_page' else '' }}">Add Client</a>
+            <button id="theme-toggle-btn">🌓</button>
+        </nav>
         <div class="user-info">
             {% if session.logged_in %}
             <span>Welcome, {{ session.username }}! <a href="{{ url_for('logout') }}">Logout</a></span>
@@ -45,5 +73,24 @@
     <main class="main-content">
         {% block content %}{% endblock %}
     </main>
+
+    <script>
+        (function() {
+            const htmlTag = document.getElementById('html-tag');
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+
+            // خواندن تم ذخیره شده از حافظه مرورگر
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            htmlTag.setAttribute('data-theme', savedTheme);
+
+            themeToggleBtn.addEventListener('click', () => {
+                let currentTheme = htmlTag.getAttribute('data-theme');
+                let newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                htmlTag.setAttribute('data-theme', newTheme);
+                // ذخیره انتخاب کاربر در حافظه مرورگر
+                localStorage.setItem('theme', newTheme);
+            });
+        })();
+    </script>
 </body>
 </html>
