@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <title>Login - Ultimate Manager</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root { /* Light Mode */
             --bg-color: #f0f2f5; --panel-bg: #ffffff; --text-color: #2c3e50; --text-color-light: #6c757d;
@@ -16,7 +13,7 @@
             --bg-color: #1a1a1a; --panel-bg: #2a2a2a; --text-color: #e0e0e0; --text-color-light: #888;
             --border-color: #444; --accent-color: #4a90e2;
         }
-        body { font-family: 'Vazirmatn', -apple-system, sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .login-container { background: var(--panel-bg); padding: 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); width: 100%; max-width: 400px; color: var(--text-color); }
         h1 { text-align: center; color: var(--text-color); margin-bottom: 25px; }
         .form-group { margin-bottom: 20px; }
@@ -27,6 +24,7 @@
         .flash-messages { list-style: none; padding: 0; margin-bottom: 20px; }
         .flash-messages li { padding: 15px; margin-bottom: 10px; border-radius: 8px; color: white; }
         .flash-danger { background-color: #e74c3c; }
+        .flash-success { background-color: #2ecc71; }
     </style>
 </head>
 <body>
@@ -54,7 +52,7 @@
         </form>
     </div>
     <script>
-        // اسکریپت ساده برای اعمال تم تاریک در صفحه لاگین
+        // اسکریپت ساده برای اعمال تم تاریک در صفحه لاگین بر اساس حافظه مرورگر
         (function() {
             const savedTheme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', savedTheme);
