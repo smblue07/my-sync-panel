@@ -1,17 +1,18 @@
 #!/bin/bash
 
 # --- Configuration ---
-GITHUB_REPO_URL="https://github.com/smblue07/my-sync-panel.git" # آدرس ریپازیتوری شما
+# !!! آدرس ریپازیتوری گیت هاب خود را اینجا قرار دهید !!!
+GITHUB_REPO_URL="https://github.com/smblue07/my-sync-panel.git"
 
 INSTALL_DIR="/root/ultimate_sync_manager"
 SYNC_SCRIPT_PATH="/root/the_final_sync.py"
-# فایل لیست سفید دیگر نیاز نیست چون منطق آن حذف شده، اما برای سازگاری می سازیم
 WHITELIST_FILE="/root/sync_whitelist.txt"
 STATE_FILE="/root/sync_state.json"
 SERVICE_NAME="sync_manager"
 
-echo "--- Ultimate Sync Manager Installer v3.1 (Single Language) ---"
+echo "--- Ultimate 3x-ui Sync Manager Installer v3.1 (Single Language) ---"
 
+# --- Interactive Setup ---
 read -p "Enter the port for the web panel (default: 5001): " WEB_PORT
 WEB_PORT=${WEB_PORT:-5001}
 echo "Web panel will be installed on port: ${WEB_PORT}"
@@ -22,8 +23,7 @@ apt-get update > /dev/null 2>&1
 apt-get install -y git python3-pip sqlite3 > /dev/null 2>&1
 
 echo "[2/5] Installing Python packages..."
-# فقط نیازمندی های اصلی
-pip3 install flask "qrcode[pil]" > /dev/null 2>&1
+pip3 install flask "qrcode[pil]" gunicorn > /dev/null 2>&1
 
 echo "[3/5] Cloning project from GitHub..."
 rm -rf ${INSTALL_DIR}
