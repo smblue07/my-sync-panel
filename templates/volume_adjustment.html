@@ -1,65 +1,101 @@
 {% extends "base.html" %}
-{% block title %}Volume Adjustment{% endblock %}
+{% block title %}{{ _('Volume Adjustment') }}{% endblock %}
 {% block content %}
 <style>
-    body { font-size: 14px; }
-    .panel { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    h2 { margin-top: 0; }
-    .group-card { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-    .group-header, .client-row, .global-actions { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .group-id { font-size: 24px; font-weight: 600; color: #333; }
-    .group-total-usage { font-size: 16px; font-weight: 500; color: #2980b9; }
-    .client-remark { flex: 3; font-weight: 500; }
-    .client-usage { flex: 2; text-align: center; }
-    .client-form { flex: 3; display: flex; gap: 5px; }
-    .client-form input { width: 80px; padding: 5px 8px; border-radius: 5px; border: 1px solid #ccc; text-align: center; }
-    .btn { border: none; padding: 8px 12px; font-size: 13px; border-radius: 8px; cursor: pointer; color: white; width: 100%; }
-    .btn-set { background-color: #27ae60; }
-    .btn-group-set { background-color: #16a085; }
-    .btn-sum { background-color: #f39c12; }
-    .btn-max { background-color: #d35400; }
-    .global-actions { margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ccc; }
+    .main-container { display: grid; grid-template-columns: 7fr 5fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
+    .panel { background: var(--panel-bg); padding: 25px 30px; border-radius: 12px; box-shadow: 0 4px 12px var(--header-shadow); }
+    h2 { margin-top: 0; color: var(--text-color); }
+    pre { background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 8px; font-size: 13px; max-height: 80vh; overflow-y: auto; white-space: pre-wrap; }
+    .group-list { list-style: none; padding: 0; max-height: 70vh; overflow-y: auto; }
+    .group-card { background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+    .group-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .group-title { display: flex; align-items: center; }
+    .group-title input[type="checkbox"] { width: 18px; height: 18px; margin-right: 15px; }
+    .group-title label { font-size: 20px; font-weight: 600; }
+    .group-info { font-size: 13px; color: var(--text-color-light); }
+    .group-info span { margin-left: 15px; }
+    .client-list { list-style: none; padding-left: 40px; margin-bottom: 15px; }
+    .client-list li { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
+    .client-usage { font-weight: 600; color: var(--accent-color); }
+    .action-forms { padding-top: 15px; border-top: 1px dashed var(--border-color); }
+    .edit-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: flex-end; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 12px; margin-bottom: 4px; color: var(--text-color-light); }
+    .form-group input { padding: 8px; border-radius: 5px; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); }
+    .btn { border: none; padding: 10px 15px; font-size: 14px; border-radius: 8px; cursor: pointer; color: white; width: 100%; box-sizing: border-box; }
+    .btn-set-limits { background-color: #5bc0de; }
+    .sync-buttons { display: flex; gap: 10px; margin-bottom: 10px; }
+    .sync-buttons form { width: calc(50% - 5px); display: flex; }
+    .btn-sum { background-color: #f0ad4e; }
+    .btn-max { background-color: #5cb85c; }
+    .main-actions { display: flex; margin-top: 25px; }
+    .btn-save-whitelist { background-color: #8e44ad; width: 100%; }
+    .btn-auto-sync { background-color: #337ab7; width: 100%; }
 </style>
-<div class="panel">
-    <h2>Volume Adjustment</h2>
-    {% for sub_id, group_data in all_groups_data.items() %}
-    <div class="group-card">
-        <div class="group-header">
-            <div>
-                <span class="group-id">{{ sub_id }}</span>
-                <br>
-                <span class="group-total-usage">Total Used: {{ "%.2f"|format(group_data.total_usage_group) }} GB</span>
-            </div>
-            <form action="{{ url_for('set_group_usage') }}" method="post" class="client-form">
-                <input type="hidden" name="sub_id" value="{{ sub_id }}">
-                <input type="number" name="usage_gb" step="0.1" placeholder="Set All (GB)">
-                <button type="submit" class="btn btn-group-set">Set All Users</button>
-            </form>
-        </div>
-        <hr>
-        {% for client in group_data.clients %}
-        <div class="client-row">
-            <span class="client-remark">{{ client.email }}</span>
-            <span class="client-usage">{{ "%.2f"|format(client.usage_gb) }} / {{ "%.2f"|format(client.total_gb) }} GB</span>
-            <form action="{{ url_for('set_individual_usage') }}" method="post" class="client-form">
-                <input type="hidden" name="sub_id" value="{{ sub_id }}">
-                <input type="hidden" name="email" value="{{ client.email }}">
-                <input type="number" name="usage_gb" step="0.1" placeholder="New Usage (GB)">
-                <button type="submit" class="btn btn-set">Set</button>
-            </form>
-        </div>
-        {% endfor %}
-        <div class="global-actions">
-            <form action="{{ url_for('sync_sum_group') }}" method="post" style="flex:1;">
-                <input type="hidden" name="sub_id" value="{{ sub_id }}">
-                <button type="submit" class="btn btn-sum">Sum All Usages</button>
-            </form>
-            <form action="{{ url_for('sync_max_group') }}" method="post" style="flex:1;">
-                <input type="hidden" name="sub_id" value="{{ sub_id }}">
-                <button type="submit" class="btn btn-max">Set All to Max Usage</button>
+<div class="main-container">
+    <div class="control-panel panel">
+        <h2>{{ _('Volume Adjustment') }}</h2>
+        <form action="{{ url_for('save_whitelist') }}" method="post" id="whitelist-form"></form>
+        <ul class="group-list">
+            {% for group_name, group_data in all_groups_data.items() %}
+            <li class="group-card">
+                <div class="group-header">
+                    <div class="group-title">
+                        <input type="checkbox" name="groups_to_sync" value="{{ group_name }}" id="group-{{ loop.index }}" form="whitelist-form" {% if group_name in whitelisted_groups %}checked{% endif %}>
+                        <label for="group-{{ loop.index }}">{{ group_name }}</label>
+                    </div>
+                    <div class="group-info">
+                        <span>{{ _('Total Used:') }} <strong>{{ "%.2f"|format(group_data.total_usage_group) }} GB</strong></span>
+                        <span>{{ _('Expiry:') }} <strong>{{ group_data.expiry_date_group }}</strong></span>
+                    </div>
+                </div>
+                <ul class="client-list">
+                    {% for client in group_data.clients %}
+                    <li>
+                        <span>{{ client.email }}</span>
+                        <span class="client-usage">{{ "%.2f"|format(client.usage_gb) }} / {{ "%.2f"|format(client.total_gb) }} GB</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <div class="action-forms">
+                    <div class="sync-buttons">
+                        <form action="{{ url_for('sync_sum') }}" method="post">
+                            <input type="hidden" name="sub_id" value="{{ group_name }}">
+                            <button type="submit" class="btn btn-sum">{{ _('Sync (Sum Usages)') }}</button>
+                        </form>
+                        <form action="{{ url_for('sync_max') }}" method="post">
+                            <input type="hidden" name="sub_id" value="{{ group_name }}">
+                            <button type="submit" class="btn btn-max">{{ _('Sync (Set to Max)') }}</button>
+                        </form>
+                    </div>
+                    <form action="{{ url_for('set_limits') }}" method="post" class="edit-form">
+                        <input type="hidden" name="sub_id" value="{{ group_name }}">
+                        <div class="form-group">
+                            <label>{{ _('Set Total (GB)') }}</label>
+                            <input type="number" name="new_total_gb" step="1" placeholder="{{ _('e.g. 100') }}">
+                        </div>
+                        <div class="form-group">
+                            <label>{{ _('Set Expiry (Days)') }}</label>
+                            <input type="number" name="new_expiry_days" step="1" placeholder="{{ _('e.g. 30') }}">
+                        </div>
+                        <div class="form-group" style="justify-content: flex-end;">
+                             <button type="submit" class="btn btn-set-limits">{{ _('Set Limits/Expiry') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        <div class="main-actions">
+            <button type="submit" form="whitelist-form" class="btn btn-save-whitelist">{{ _('Save Whitelist for Auto-Sync') }}</button>
+            <form action="{{ url_for('sync_now') }}" method="post" style="flex-grow: 1; margin-left: 10px;">
+                <button type="submit" class="btn btn-auto-sync">{{ _('Run Auto-Sync Script Manually') }}</button>
             </form>
         </div>
     </div>
-    {% endfor %}
+    <div class="output-panel panel">
+        <h2>{{ _('Sync Log') }}</h2>
+        <pre>{% if sync_output %}{{ sync_output }}{% else %}{{ _('Click "Run Auto-Sync" or a manual sync button to see the output here.') }}{% endif %}</pre>
+    </div>
 </div>
 {% endblock %}
