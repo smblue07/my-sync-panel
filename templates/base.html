@@ -1,25 +1,22 @@
 <!DOCTYPE html>
-<html lang="{{ g.locale }}" id="html-tag" dir="{{ 'rtl' if g.locale == 'fa' else 'ltr' }}">
+<html lang="en" id="html-tag">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}{{ _('Sync Manager') }}{% endblock %}</title>
+    <title>{% block title %}Sync Manager{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         :root { /* Light Mode */
             --bg-color: #f0f2f5; --panel-bg: #ffffff; --text-color: #2c3e50; --text-color-light: #6c757d;
             --border-color: #e9ecef; --accent-color: #3498db; --header-bg: #ffffff; --header-shadow: rgba(0,0,0,0.08);
-            --btn-green-bg: #27ae60; --btn-red-bg: #e74c3c; --font-family: 'Vazirmatn', -apple-system, sans-serif;
+            --btn-red-bg: #e74c3c;
         }
         [data-theme="dark"] { /* Dark Mode */
             --bg-color: #1a1a1a; --panel-bg: #2a2a2a; --text-color: #e0e0e0; --text-color-light: #888;
             --border-color: #444; --accent-color: #4a90e2; --header-bg: #2a2a2a; --header-shadow: rgba(255,255,255,0.08);
-            --btn-green-bg: #2ecc71; --btn-red-bg: #e74c3c;
+            --btn-red-bg: #e74c3c;
         }
-        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: background-color 0.3s, color 0.3s; }
+        body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: background-color 0.3s, color 0.3s; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 20px auto; padding: 10px 20px; background-color: var(--header-bg); border-radius: 12px; box-shadow: 0 4px 12px var(--header-shadow); transition: background-color 0.3s; }
         .top-bar .logo { font-size: 24px; color: var(--text-color); font-weight: 700; }
         .top-bar .nav { display: flex; gap: 10px; align-items: center; }
@@ -28,35 +25,23 @@
         .top-bar .nav a:not(.active) { color: var(--text-color); background-color: var(--border-color); }
         .top-bar .user-info { display:flex; align-items:center; gap: 15px; }
         .top-bar .user-info a { text-decoration: none; background: var(--btn-red-bg); color: white; padding: 8px 15px; border-radius: 8px; font-weight: 500; }
-        .theme-lang-switcher { display: flex; gap: 15px; align-items: center; }
         #theme-toggle-btn { background: none; border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; display: flex; align-items: center; justify-content: center; }
-        .lang-switcher a { text-decoration: none; color: var(--text-color); font-weight: 600; }
         .flash-messages { list-style: none; padding: 0; max-width: 1400px; margin: 0 auto 20px auto; }
         .flash-messages li { padding: 15px; border-radius: 8px; color: white; margin-bottom: 10px; }
         .flash-success { background-color: #2ecc71; } .flash-danger { background-color: #e74c3c; } .flash-info { background-color: #3498db; }
-        html[dir="rtl"] .top-bar .nav { margin-right: auto; }
     </style>
 </head>
 <body>
     <header class="top-bar">
-        <div class="logo">{{ _('Ultimate Manager') }}</div>
+        <div class="logo">Ultimate Manager</div>
         <nav class="nav">
-            <a href="{{ url_for('volume_adjustment') }}" class="{{ 'active' if request.endpoint == 'volume_adjustment' else '' }}">{{ _('Volume Adjustment') }}</a>
-            <a href="{{ url_for('add_client_page') }}" class="{{ 'active' if request.endpoint == 'add_client_page' else '' }}">{{ _('Add Client') }}</a>
+            <a href="{{ url_for('volume_adjustment') }}" class="{{ 'active' if request.endpoint == 'volume_adjustment' else '' }}">Volume Adjustment</a>
+            <a href="{{ url_for('add_client_page') }}" class="{{ 'active' if request.endpoint == 'add_client_page' else '' }}">Add Client</a>
         </nav>
         <div class="user-info">
-            <div class="theme-lang-switcher">
-                <button id="theme-toggle-btn"><i class="fas fa-moon"></i></button>
-                <div class="lang-switcher">
-                    {% if g.locale == 'fa' %}
-                    <a href="{{ url_for('set_language', language='en') }}">English</a>
-                    {% else %}
-                    <a href="{{ url_for('set_language', language='fa') }}">فارسی</a>
-                    {% endif %}
-                </div>
-            </div>
+            <button id="theme-toggle-btn"><i class="fas fa-moon"></i></button>
             {% if session.logged_in %}
-            <span>{{ _('Welcome,') }} {{ session.username }}! <a href="{{ url_for('logout') }}">{{ _('Logout') }}</a></span>
+            <span style="margin-left:15px;">Welcome, {{ session.username }}! <a href="{{ url_for('logout') }}">Logout</a></span>
             {% endif %}
         </div>
     </header>
