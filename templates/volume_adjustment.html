@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Volume Adjustment{% endblock %}
+{% block content %}
+<style>
+    body { font-size: 14px; }
+    .panel { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; }
+    .group-card { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+    .group-header, .client-row, .global-actions { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .group-id { font-size: 24px; font-weight: 600; color: #333; }
+    .group-total-usage { font-size: 16px; font-weight: 500; color: #2980b9; }
+    .client-remark { flex: 3; font-weight: 500; }
+    .client-usage { flex: 2; text-align: center; }
+    .client-form { flex: 3; display: flex; gap: 5px; }
+    .client-form input { width: 80px; padding: 5px 8px; border-radius: 5px; border: 1px solid #ccc; text-align: center; }
+    .btn { border: none; padding: 8px 12px; font-size: 13px; border-radius: 8px; cursor: pointer; color: white; width: 100%; }
+    .btn-set { background-color: #27ae60; }
+    .btn-group-set { background-color: #16a085; }
+    .btn-sum { background-color: #f39c12; }
+    .btn-max { background-color: #d35400; }
+    .global-actions { margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ccc; }
+</style>
+<div class="panel">
+    <h2>Volume Adjustment</h2>
+    {% for sub_id, group_data in all_groups_data.items() %}
+    <div class="group-card">
+        <div class="group-header">
+            <div>
+                <span class="group-id">{{ sub_id }}</span>
+                <br>
+                <span class="group-total-usage">Total Used: {{ "%.2f"|format(group_data.total_usage_group) }} GB</span>
+            </div>
+            <form action="{{ url_for('set_group_usage') }}" method="post" class="client-form">
+                <input type="hidden" name="sub_id" value="{{ sub_id }}">
+                <input type="number" name="usage_gb" step="0.1" placeholder="Set All (GB)">
+                <button type="submit" class="btn btn-group-set">Set All Users</button>
+            </form>
+        </div>
+        <hr>
+        {% for client in group_data.clients %}
+        <div class="client-row">
+            <span class="client-remark">{{ client.email }}</span>
+            <span class="client-usage">{{ "%.2f"|format(client.usage_gb) }} / {{ "%.2f"|format(client.total_gb) }} GB</span>
+            <form action="{{ url_for('set_individual_usage') }}" method="post" class="client-form">
+                <input type="hidden" name="sub_id" value="{{ sub_id }}">
+                <input type="hidden" name="email" value="{{ client.email }}">
+                <input type="number" name="usage_gb" step="0.1" placeholder="New Usage (GB)">
+                <button type="submit" class="btn btn-set">Set</button>
+            </form>
+        </div>
+        {% endfor %}
+        <div class="global-actions">
+            <form action="{{ url_for('sync_sum_group') }}" method="post" style="flex:1;">
+                <input type="hidden" name="sub_id" value="{{ sub_id }}">
+                <button type="submit" class="btn btn-sum">Sum All Usages</button>
+            </form>
+            <form action="{{ url_for('sync_max_group') }}" method="post" style="flex:1;">
+                <input type="hidden" name="sub_id" value="{{ sub_id }}">
+                <button type="submit" class="btn btn-max">Set All to Max Usage</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
